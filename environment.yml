@@ -1,0 +1,11 @@
+name: im_proc
+
+dependencies:
+  - python=3.10
+  - numpy
+  - matplotlib
+  - pandas
+  - scikit-learn
+  - opencv
+  - pillow
+  - scipy
