@@ -6,8 +6,8 @@ def run_pipe(args):
     ref_im, query_im = read_images(args.ref_image_path, args.query_image_path)
 
     # Estimate the noise level of the image
-    ref_sigma   = estimate_sigma(ref_im)
-    query_sigma = estimate_sigma(query_im)
+    # ref_sigma   = estimate_sigma(ref_im)
+    # query_sigma = estimate_sigma(query_im)
 
     # Find transformation between the query image to the ref image
     _, transformed_query_img, trans = find_rigid_transformation(ref_im, query_im, args.is_debug)

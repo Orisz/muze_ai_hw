@@ -1,6 +1,7 @@
 import cv2
 from typing import Tuple
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def read_images(ref_im_path:str, query_im_path:str, is_debug:bool=False) -> Tuple[np.ndarray, np.ndarray]:
@@ -54,46 +55,105 @@ def find_rigid_transformation(ref_im:np.ndarray,
     # Convert the images to grayscale
     ref_img     = cv2.cvtColor(ref_im   , cv2.COLOR_BGR2GRAY)
     query_img   = cv2.cvtColor(query_im , cv2.COLOR_BGR2GRAY)
+    # query_img = ref_img
 
-    use_ECC = True
-    if use_ECC:
-        # Define the motion model to use (MOTION_TRANSLATION for translation only)
-        motion_model = cv2.MOTION_TRANSLATION
+    # ref_img   = apply_LoG(ref_img)
+    # query_img = apply_LoG(query_img)
 
-        # Set the termination criteria for the iterative algorithm (max number of iterations and epsilon)
-        criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10000, 1e-9)
+    use_sift = False
+    if use_sift:
+        # Create a SIFT feature detector object
+        sift = cv2.xfeatures2d.SIFT_create()
 
-        # Estimate the 2D rigid transformation using cv2.findTransformECC()
-        cc, transformation = cv2.findTransformECC(ref_img, query_img, np.eye(2, 3, dtype=np.float32),
-                                                motion_model, criteria, None, 1)
+        # Detect and compute keypoints and descriptors for both images
+        kp1, des1 = sift.detectAndCompute(ref_img, None)
+        kp2, des2 = sift.detectAndCompute(query_img, None)
+
+        # Create a brute force matcher object
+        bf = cv2.BFMatcher()
+
+        # Match the descriptors between the two images
+        matches = bf.knnMatch(des1, des2, k=2)
+
+        # Apply the ratio test to filter out ambiguous matches
+        good_matches = []
+        for m, n in matches:
+            if m.distance < 0.75 * n.distance:
+                good_matches.append(m)
+
+        # Extract the corresponding keypoint coordinates for the good matches
+        pts1 = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+        pts2 = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+
+        # Estimate the homography matrix between the two images using RANSAC algorithm
+        H, _ = cv2.findHomography(pts2, pts1, cv2.RANSAC, 5.0)
+
+        # Warp the second image to align it with the first image using the estimated homography matrix
+        warped_img = cv2.warpPerspective(query_img, H, (ref_img.shape[1], ref_img.shape[0]))
+
+        # Display the results
+        cv2.imshow("Image 1", ref_img)
+        cv2.imshow("Image 2", query_img)
+        cv2.imshow("Warped Image 2", warped_img)
+        res = ref_img - warped_img
+        min_res = res.min()
+        res = res + min_res
+        cv2.imshow("diff", res)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     else:
-        # Find keypoints and descriptors in the two images using ORB
-        orb = cv2.ORB_create()
-        ref_kp, ref_desc = orb.detectAndCompute(ref_img, None)
-        query_kp, query_desc = orb.detectAndCompute(query_img, None)
 
-        # Find matches between the descriptors using brute force matching
-        matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        matches = matcher.match(ref_desc, query_desc)
+        # Define the template size
+        template_size = (100, 100)
 
-        # Sort the matches by their distances
-        matches = sorted(matches, key=lambda x: x.distance)
+        # Define the template from the reference image
+        top_left = (query_img.shape[0] // 2 - template_size[0] // 2, query_img.shape[1] // 2 - template_size[1] // 2)
+        template = ref_img[top_left[0]:top_left[0]+template_size[0], top_left[1]:top_left[1]+template_size[1]]
 
-        # Use the first 10% of matches to find the homography between the images
-        num_matches = int(len(matches) * 0.1)
-        ref_pts = np.float32([ref_kp[m.queryIdx].pt for m in matches[:num_matches]]).reshape(-1, 1, 2)
-        query_pts = np.float32([query_kp[m.trainIdx].pt for m in matches[:num_matches]]).reshape(-1, 1, 2)
-        homography, _ = cv2.findHomography(query_pts, ref_pts, cv2.RANSAC)
-        transformation = np.array([[1, 0, homography[0, 2]], [0, 1, homography[1, 2]]])
-    
-    # Transform the query image to the reference image using cv2.warpAffine()
-    transformed_query_img = cv2.warpAffine(query_img, transformation, (ref_img.shape[1], ref_img.shape[0]))
+        # Perform template matching to determine the shift between the two images
+        result = cv2.matchTemplate(query_img, template, cv2.TM_CCOEFF)
+        _, _, _, max_loc = cv2.minMaxLoc(result)
 
-    if is_debug:
-        # Display the transformed query image and the reference image side by side
-        result_img = np.hstack((ref_img, transformed_query_img))
-        cv2.imshow('Transformed query image (right) and reference image (left)', result_img)
+        # Get the x and y shift from the template matching result
+        shift_x = top_left[1] - max_loc[0]
+        shift_y = top_left[0] - max_loc[1]
+
+        # Create a transformation matrix to shift the target image
+        M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
+
+        # Apply the transformation matrix to the target image
+        img_aligned = cv2.warpAffine(query_img, M, (query_img.shape[1], query_img.shape[0]))
+
+        # # Display the aligned image
+        # cv2.imshow('Aligned Image', img_aligned)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+         # Display the results
+        cv2.imshow("Image 1", ref_img)
+        cv2.imshow("Image 2", query_img)
+        cv2.imshow("Warped Image 2", img_aligned)
+        res = ref_img - img_aligned
+        min_res = res.min()
+        res = res + min_res
+        cv2.imshow("diff", res)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    return ref_im, transformed_query_img, transformation
+    return ref_im, warped_img, H
+
+def apply_LoG(image:np.ndarray) -> np.ndarray:
+    # Apply Gaussian blur to the image
+    blurred = cv2.GaussianBlur(image, (9, 9), 0)
+
+    # # Apply Laplacian of Gaussian (LoG) filter to the blurred image
+    # log = cv2.Laplacian(blurred, cv2.CV_64F)
+
+    # # Convert the result to uint8 and normalize the values to the range [0, 255]
+    # log = cv2.convertScaleAbs(log)
+    # cv2.normalize(log, log, 0, 255, cv2.NORM_MINMAX)
+
+    # Display the result
+    # cv2.imshow("LoG Filtered Image", blurred)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    return blurred
