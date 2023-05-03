@@ -43,18 +43,21 @@ def estimate_sigma(image:np.ndarray) -> float:
 
     return sigma
 
-def find_rigid_transformation(ref_im:np.ndarray,
+def align_images(ref_im:np.ndarray,
                               query_im:np.ndarray,
                               is_debug:bool=False)\
-    -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    -> Tuple[np.ndarray, np.ndarray]:
     """
     Finds a rigid transformation between the query image to the ref image
-    and return the ref image, transformed query image and the 
-    transformation it self.
+    and return the ref image and the transformed query image.
     """
     # Convert the images to grayscale
     ref_img     = cv2.cvtColor(ref_im   , cv2.COLOR_BGR2GRAY)
     query_img   = cv2.cvtColor(query_im , cv2.COLOR_BGR2GRAY)
+
+    # normalize images:
+    # ref_img     = cv2.normalize(ref_img  , None, 0, 255, cv2.NORM_MINMAX)
+    # query_img   = cv2.normalize(query_img, None, 0, 255, cv2.NORM_MINMAX)
     # query_img = ref_img
 
     # ref_img   = apply_LoG(ref_img)
@@ -129,31 +132,32 @@ def find_rigid_transformation(ref_im:np.ndarray,
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
          # Display the results
-        cv2.imshow("Image 1", ref_img)
-        cv2.imshow("Image 2", query_img)
-        cv2.imshow("Warped Image 2", img_aligned)
-        res = ref_img - img_aligned
-        min_res = res.min()
-        res = res + min_res
-        cv2.imshow("diff", res)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow("Image 1", ref_img)
+        # cv2.imshow("Image 2", query_img)
+        # cv2.imshow("Warped Image 2", img_aligned)
+        # res = ref_img - img_aligned
+        # min_res = res.min()
+        # res = res + min_res
+        # cv2.imshow("diff", res)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
-    return ref_im, warped_img, H
+    return ref_img, img_aligned
 
-def apply_LoG(image:np.ndarray) -> np.ndarray:
-    # Apply Gaussian blur to the image
-    blurred = cv2.GaussianBlur(image, (9, 9), 0)
+# def apply_LoG(image:np.ndarray) -> np.ndarray:
+#     # Apply Gaussian blur to the image
+#     # blurred = cv2.GaussianBlur(image, (9, 9), 0)
+#     blurred = cv2.medianBlur(image, 3)
 
-    # # Apply Laplacian of Gaussian (LoG) filter to the blurred image
-    # log = cv2.Laplacian(blurred, cv2.CV_64F)
+#     # # Apply Laplacian of Gaussian (LoG) filter to the blurred image
+#     # log = cv2.Laplacian(blurred, cv2.CV_64F)
 
-    # # Convert the result to uint8 and normalize the values to the range [0, 255]
-    # log = cv2.convertScaleAbs(log)
-    # cv2.normalize(log, log, 0, 255, cv2.NORM_MINMAX)
+#     # # Convert the result to uint8 and normalize the values to the range [0, 255]
+#     # log = cv2.convertScaleAbs(log)
+#     # cv2.normalize(log, log, 0, 255, cv2.NORM_MINMAX)
 
-    # Display the result
-    # cv2.imshow("LoG Filtered Image", blurred)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    return blurred
+#     # Display the result
+#     # cv2.imshow("LoG Filtered Image", blurred)
+#     # cv2.waitKey(0)
+#     # cv2.destroyAllWindows()
+#     return blurred
