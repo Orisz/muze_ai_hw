@@ -1,7 +1,8 @@
 numpy
 matplotlib
-pandas
 scikit-learn
 opencv-python
-pillow
 scipy
+matplotlib
+fire
+tqdm
