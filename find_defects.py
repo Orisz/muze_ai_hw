@@ -15,7 +15,7 @@ def save_mask(binary_mask:np.ndarray, dst:str, im_path:str, conf_lvl:int):
     cv2.imwrite(im_full_loc, binary_mask)
 
 
-def find_defects(ref_im, query_im, M, confidence_level):
+def find_defects(ref_im:np.ndarray, query_im:np.ndarray, M:np.ndarray, confidence_level:int) -> np.ndarray:
     """
     Given the images, the transformation, and the desired confidence level
     align the images
