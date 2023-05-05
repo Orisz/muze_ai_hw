@@ -4,18 +4,27 @@ import scipy.stats as stats
 import os
 
 
-def save_mask(binary_mask:np.ndarray, dst:str, im_path:str, conf_lvl:int):
+def save_mask_n_image(query_im:np.ndarray, 
+                      binary_mask:np.ndarray, 
+                      dst:str, im_path:str, 
+                      conf_lvl:int, 
+                      allow_filter:bool):
     """
     saves the musk given some paras such as destination image name etc.
     """
     if not os.path.exists(dst):
         os.makedirs(dst)
     im_name = im_path.split("/")[-1]
-    im_full_loc = os.path.join(dst, f"mask_{conf_lvl}%_conf_lvl_"+im_name)
-    cv2.imwrite(im_full_loc, binary_mask)
+    im_full_loc = os.path.join(dst, f"mask_conf_lvl_{conf_lvl}%_allow_filter_{allow_filter}_"+im_name)
+    to_save = cv2.hconcat([query_im, binary_mask])
+    cv2.imwrite(im_full_loc, to_save)
 
 
-def find_defects(ref_im:np.ndarray, query_im:np.ndarray, M:np.ndarray, confidence_level:int) -> np.ndarray:
+def find_defects(ref_im:np.ndarray, 
+                 query_im:np.ndarray, 
+                 M:np.ndarray, 
+                 confidence_level:int, 
+                 allow_filter:bool) -> np.ndarray:
     """
     Given the images, the transformation, and the desired confidence level
     align the images
@@ -55,6 +64,9 @@ def find_defects(ref_im:np.ndarray, query_im:np.ndarray, M:np.ndarray, confidenc
     # Threshold the image to get the binary mask
     _, binary_mask = cv2.threshold(diff, thresh, 255, cv2.THRESH_BINARY)
 
+    if allow_filter:
+        binary_mask = apply_morphological(binary_mask)
+
     return binary_mask
 
 def run_pipe(args):
@@ -65,9 +77,18 @@ def run_pipe(args):
     M = find_transformation(ref_im, query_im, args.is_debug)
 
     # Find the defects
-    binary_mask = find_defects(ref_im, query_im, M, args.confidence_level)
+    binary_mask = find_defects(ref_im, 
+                               query_im, 
+                               M, 
+                               args.confidence_level, 
+                               parse_to_bool(args.allow_filter))
 
-    save_mask(binary_mask, args.dst_path, args.query_image_path, args.confidence_level)
+    save_mask_n_image(query_im, 
+                      binary_mask, 
+                      args.dst_path, 
+                      args.query_image_path, 
+                      args.confidence_level, 
+                      parse_to_bool(args.allow_filter))
 
 def main():
     # Create an ArgumentParser object to get the image paths as input arguments
@@ -76,7 +97,8 @@ def main():
     parser.add_argument('--query_image_path', type=str, help='Path to the query image')
     parser.add_argument('--confidence_level', type=int, help='desired conf level, provide an integer within the range [0,100]')
     parser.add_argument('--dst_path', type=str, help='location folder to save the results in')
-    parser.add_argument('--is_debug', type=bool, default=False, help='Debug falg, set true for debug properties')
+    parser.add_argument('--allow_filter', type=str, default="False", help='allow morphological filtering to the mask')
+    parser.add_argument('--is_debug', type=bool, default=False, help='Debug flag, set true for debug properties')
     args = parser.parse_args()
 
     # Run analysis pipeline

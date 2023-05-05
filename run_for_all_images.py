@@ -4,7 +4,7 @@ import sys
 from tqdm import tqdm
 
 
-def run_on_all_images(confidence_level:int):
+def run_on_all_images(confidence_level:int, allow_filter:bool):
     assert type(confidence_level)==int and confidence_level>=0 and confidence_level<=100,\
         "'confidence_level' must be an integer in range [0,100]"
     
@@ -24,7 +24,8 @@ def run_on_all_images(confidence_level:int):
              --ref_image_path {ref_im}\
              --query_image_path {query_im}\
              --confidence_level {confidence_level}\
-             --dst_path {dst_path}"\
+             --dst_path {dst_path}\
+             --allow_filter {str(allow_filter)}"\
              for ref_im, query_im in zip(ref, query)]
 
     for cmd in tqdm(cmds):

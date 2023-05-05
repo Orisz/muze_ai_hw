@@ -88,3 +88,21 @@ def apply_LoG(image:np.ndarray) -> np.ndarray:
     # Back to uint8
     im = cv2.convertScaleAbs(im)
     return im
+
+def apply_morphological(binary_mask:np.ndarray) -> np.ndarray:
+
+    # Define a kernel for the morphological filter
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+
+    # Apply a morphological opening operation to the thresholded image
+    opening = cv2.morphologyEx(binary_mask, cv2.MORPH_OPEN, kernel)
+
+    return opening
+
+def parse_to_bool(word:str) -> bool:
+    if word == "False":
+        return False
+    elif word == "True":
+        return True
+    else:
+        raise ValueError("Please pass 'False' or 'True'")
