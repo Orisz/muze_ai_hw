@@ -11,10 +11,11 @@ a coding interview given by the company
 2. Since I was told the defect can be within a size of a single pixel there is no point in denosing the images when trying to find the binary mask. This issue made things more challenging.
 3. For the alignment part I first tried a SIFT approach following a RANSAC for the matching points. Although I tried several optimizers and feature extractors the images seems to be too noisy for that approach. Finally I turned to a template matching approach which in it's core uses cross correlation score. To make the results more robust to the already extreme noise the transformation was calculated on the Laplacian of Gaussian of the images.
 4. Finally for the detection of the defects I used the absolute difference of the aligned images. Than I used the 'Median Absolute Deviation (MAD)' method to estimate the std of the query image. And finally, I utilized the white additive Gaussian noise assumption to derive a probabilistic scheme that given the desired confidence level and the estimated std decides on the threshold. This threshold in turn was used to acquire the binary mask of the query image.
+5. Since the results are so noisy I added the option to execute morphological filtering on the binary musk. The results are much less noisy and the mask still 'catch' the major defects which are bigger but on the other hand small/thin defects like the hair thread in inspected case 2 is filtered out.
 
 ## Results
-* all the output images can be found in the 'output' folder. I supplied the results for two levels of confidence (95% and 99%).
-* The masks are not ideal and one must consider which is more important to him, low False Negative or low False Positive. The higher the confidence level we seek the lower False positive occurrences we get (and vice versa for the False Negative). One can also plot the ROC curve the get a better understanding for the desired threshold.
+* all the output images can be found in the 'output' folder. I supplied the results for two levels of confidence (95% and 99%) and for both options of filtering and not filtering the binary mask.
+* The masks are not ideal and one must consider which is more important to him, low False Negative or low False Positive. The higher the confidence level we seek, the lower False positive occurrences we get (and vice versa for the False Negative). The same effect applies when using/not using the filtering option. One can also plot the ROC curve the get a better understanding for the desired threshold.
 
 ## Discussion and possible improvements
 * If we had many images of the same "pattern" (which we should have), we cloud have average many images together and have a better understanding of the added noise.
@@ -27,13 +28,14 @@ a coding interview given by the company
 ## Regenerate the results
 from the root folder just run
 ```bash
-python run_for_all_images.py <confidence_level>
+python run_for_all_images.py <confidence_level> <allow_filtering>
 ```
-where: confidence_level$\in[0,100]$ is an integer.
+where: confidence_level$\in[0,100]$ is an integer,
+and allow_filtering is a boolean flag that allow the algorithm filter the binary mask using morphological filtering.
 
 To run the core algorithm on some other images run:
 ```bash
-python find_defects.py --ref_image_path <path to ref image> --query_image_path <path to query image> --confidence_level <desired confidence level> --dst_path <location (folder) to save the binary mask to>
+python find_defects.py --ref_image_path <path to ref image> --query_image_path <path to query image> --confidence_level <desired confidence level> --dst_path <location (folder) to save the binary mask to> --allow_filter <is allow filtering>
 ```
 
 
